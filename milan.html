@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WinRate AI</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #1e3a8a, #9333ea);
+    color: white;
+}
+
+/* Pages */
+.page { display: none; padding: 15px; }
+.active { display: block; }
+
+/* Inputs */
+input, button {
+    width: 100%;
+    padding: 14px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+}
+
+button {
+    background: #22c55e;
+    color: white;
+    font-weight: bold;
+}
+
+/* Cards */
+.card {
+    background: rgba(255,255,255,0.12);
+    padding: 14px;
+    margin: 10px 0;
+    border-radius: 12px;
+    font-size: 15px;
+}
+
+/* Header */
+h2 {
+    margin-top: 5px;
+    font-size: 20px;
+}
+
+/* Filter bar */
+.filter {
+    position: sticky;
+    top: 0;
+    background: rgba(0,0,0,0.4);
+    padding: 10px 5px;
+    border-radius: 10px;
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.filter button {
+    background: #f59e0b;
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+/* Smaller text */
+.small {
+    font-size: 13px;
+    opacity: 0.9;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="page active">
+<h2>⚽ WinRate AI</h2>
+<input type="email" placeholder="Enter Gmail">
+<input type="password" id="pin" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- SPORTS -->
+<div id="sports" class="page">
+<h2>🎮 Select Sport</h2>
+<div class="card" onclick="openMatches()">⚽ Football</div>
+<div class="card">🏐 Volleyball</div>
+<div class="card">🏀 Basketball</div>
+<div class="card">🎾 Tennis</div>
+<div class="card">🏏 Cricket</div>
+</div>
+
+<!-- MATCHES -->
+<div id="matches" class="page">
+<h2>⚽ Matches</h2>
+
+<div class="filter">
+<button onclick="filterTime(30)">30m</button>
+<button onclick="filterTime(60)">1h</button>
+<button onclick="filterTime(120)">2h</button>
+<button onclick="filterTime(360)">6h</button>
+<button onclick="filterTime(1440)">24h</button>
+<button onclick="filterTime(2880)">2d</button>
+</div>
+
+<div id="matchList"></div>
+</div>
+
+<script>
+
+const API_KEY = "YOUR_API_KEY";
+let allMatches = [];
+
+// LOGIN
+function login() {
+    let pin = document.getElementById("pin").value;
+    if(pin === "1188") {
+        showPage("sports");
+    } else {
+        alert("Wrong password");
+    }
+}
+
+function showPage(id) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+}
+
+// LOAD MATCHES
+async function openMatches() {
+    showPage("matches");
+
+    const res = await fetch("https://api-football-v1.p.rapidapi.com/v3/fixtures?next=50", {
+        headers: {
+            "X-RapidAPI-Key": API_KEY,
+            "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
+        }
+    });
+
+    const data = await res.json();
+    allMatches = data.response;
+
+    displayMatches(allMatches);
+}
+
+// FILTER
+function filterTime(minutes) {
+    let now = new Date();
+
+    let filtered = allMatches.filter(m => {
+        let matchTime = new Date(m.fixture.date);
+        let diff = (matchTime - now) / 60000;
+        return diff <= minutes && diff > 0;
+    });
+
+    displayMatches(filtered);
+}
+
+// DISPLAY
+function displayMatches(matches) {
+    const list = document.getElementById("matchList");
+    list.innerHTML = "";
+
+    matches.forEach(m => {
+
+        let home = m.teams.home.name;
+        let away = m.teams.away.name;
+
+        let matchTime = new Date(m.fixture.date);
+        let now = new Date();
+        let diffMin = Math.floor((matchTime - now)/60000);
+
+        // Prediction (basic)
+        let h = Math.random()*10;
+        let a = Math.random()*10;
+
+        let total = h+a;
+        let hp = ((h/total)*100).toFixed(1);
+        let ap = ((a/total)*100).toFixed(1);
+
+        let winner = hp > ap ? home : away;
+
+        list.innerHTML += `
+        <div class="card">
+            <b>${home}</b> vs <b>${away}</b><br>
+            <span class="small">Starts in: ${diffMin} min</span><br><br>
+
+            ${home}: ${hp}%<br>
+            ${away}: ${ap}%<br><br>
+
+            <b>Prediction: ${winner}</b>
+        </div>
+        `;
+    });
+}
+
+</script>
+
+</body>
+</html>
